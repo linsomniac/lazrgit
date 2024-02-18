@@ -8,15 +8,17 @@ from typing import Generator
 
 
 def get_cases() -> Generator[str, None, None]:
-    token = internal.context.config.get('jira', 'token')
-    url = internal.context.config.get('jira', 'url')
-    username = internal.context.config.get('jira', 'username')
+    token = internal.context.config.get("jira", "token")
+    url = internal.context.config.get("jira", "url")
+    username = internal.context.config.get("jira", "username")
 
     jira = JIRA(url, basic_auth=(username, token))
 
     # Search for issues assigned to the current user
-    issues = jira.search_issues('assignee = currentUser() AND resolution = Unresolved AND updated >= -30d ORDER BY updated DESC, created DESC')
+    issues = jira.search_issues(
+        "assignee = currentUser() AND resolution = Unresolved AND updated >= -30d ORDER BY updated DESC, created DESC"
+    )
 
     # Print the key and summary of each issue
     for issue in issues:
-        yield f'{issue.key} {issue.fields.summary}'
+        yield f"{issue.key} {issue.fields.summary}"
