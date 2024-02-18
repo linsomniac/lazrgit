@@ -1,0 +1,32 @@
+[project]
+name = "lazrgit"
+version = "0.1.0"
+description = "A lazier lazygit, a git commit TUI oriented towards my workflow."
+authors = [
+    { name = "Sean Reifschneider", email = "jafo00@gmail.com" }
+]
+dependencies = [
+    "textual>=0.51.0",
+    "gitpython>=3.1.42",
+    "jira>=3.6.0",
+    "requests>=2.31.0",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[project.scripts]
+lzr = "lazrgit.commit:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lazrgit"]

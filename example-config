@@ -1,0 +1,4 @@
+[jira]
+token = XXX
+url = https://YOUR_SITENAME.atlassian.net
+username = USER@EXAMPLE.COM
