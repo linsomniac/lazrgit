@@ -22,9 +22,28 @@ from git import Repo
 from typing import Generator, Optional
 import re
 from . import jira
+from .git import git
 
 
-# class ConfirmCommitModal(ModalScreen[bool]):
+def all_changed_files() -> Generator[tuple[str, str, bool], None, None]:
+    already_seen = set()
+
+    #  unstaged files
+    for file in [file.a_path for file in git.repo.index.diff(None)]:
+        yield ((file, file, False))
+        already_seen.add(file)
+    #  staged files
+    for file in [file.a_path for file in git.repo.index.diff(git.repo.head.commit)]:
+        if file in already_seen:
+            continue
+        yield ((file, file, True))
+
+
+def label_untracked_files() -> Generator[tuple[str, str, bool], None, None]:
+    for file in git.repo.untracked_files:
+        yield ((f"[UNTRACKED] {file}", file, False))
+
+
 class ConfirmCommitModal(Screen[bool]):
     """Ask the user if they want to commit and exit"""
 
@@ -87,31 +106,11 @@ class GitBrowser(App):
     }
     """
 
-    def get_changed_files(self) -> Generator[tuple[str, str, bool], None, None]:
-        repo = Repo(".")
-        already_seen = set()
-
-        #  unstaged files
-        for file in [file.a_path for file in repo.index.diff(None)]:
-            yield ((file, file, False))
-            already_seen.add(file)
-        #  staged files
-        for file in [file.a_path for file in repo.index.diff(repo.head.commit)]:
-            if file in already_seen:
-                continue
-            yield ((file, file, True))
-
-    def get_untracked_files(self) -> Generator[tuple[str, str, bool], None, None]:
-        repo = Repo(".")
-        for file in repo.untracked_files:
-            yield ((f"[UNTRACKED] {file}", file, False))
-
     def compose(self) -> ComposeResult:
         """Compose our UI."""
         yield Header()
         with Container():
-            repo = Repo(".")
-            branch = str(repo.active_branch)
+            branch = str(git.repo.active_branch)
             branch_style = {
                 "master": "[white]",
                 "stg": ":warning: [yellow]",
@@ -126,8 +125,8 @@ class GitBrowser(App):
             )
             yield SelectionList[str](
                 *(
-                    list(sorted(self.get_changed_files()))
-                    + list(self.get_untracked_files())
+                    list(sorted(all_changed_files()))
+                    + list(label_untracked_files())
                 ),
                 id="file-list",
             )
@@ -145,15 +144,14 @@ class GitBrowser(App):
     def update_selected_view(self) -> None:
         selected = self.query_one(SelectionList).selected
 
-        repo = Repo(".")
-        unstaged_files = list([file.a_path for file in repo.index.diff(None)])
-        staged_files = list([file.a_path for file in repo.index.diff(repo.head.commit)])
+        unstaged_files = list([file.a_path for file in git.repo.index.diff(None)])
+        staged_files = list([file.a_path for file in git.repo.index.diff(git.repo.head.commit)])
 
-        repo.index.add(selected)
+        git.repo.index.add(selected)
 
         for file in staged_files:
             if file not in selected and file not in unstaged_files:
-                repo.index.remove([file])
+                git.repo.index.remove([file])
 
     def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
         current_text = self.query_one("#commit-message").text
@@ -170,9 +168,8 @@ class GitBrowser(App):
     @work
     async def action_commit(self) -> None:
         if await self.push_screen_wait(ConfirmCommitModal()):
-            repo = Repo(".")
             commit_message = self.query_one("#commit-message").text
-            repo.index.commit(commit_message)
+            git.repo.index.commit(commit_message)
             self.app.exit()
         self.refresh()
 
