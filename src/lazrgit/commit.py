@@ -22,6 +22,7 @@ from typing import Generator, Optional
 import re
 from . import jira
 from . import git
+from . import ask_openai
 
 repo = git.gitctx.repo
 
@@ -154,6 +155,8 @@ class GitBrowser(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        ret = ask_openai.ask_openai('You are a poet', 'did you know it?')
+        import syslog; syslog.syslog(f"@@@ ret: {ret}")
         self.query_one(SelectionList).border_title = "Files"
         self.query_one(RadioSet).border_title = "Cases"
         self.query_one(TextArea).border_title = "Commit Message"
@@ -170,7 +173,6 @@ class GitBrowser(App):
 
         for file in staged_files:
             if file not in selected and file not in unstaged_files:
-                # repo.index.reset([file])
                 repo.git.reset(file)
 
     @on(DescendantFocus, "#cases")
