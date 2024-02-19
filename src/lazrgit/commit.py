@@ -76,7 +76,7 @@ class ConfirmCommitModal(Screen[bool]):
 class GitBrowser(App):
     BINDINGS = [
         ("c", "commit", "Commit"),
-        ("g", "guess_case", "Guess Case"),
+        #("g", "guess_case", "Guess Case"),
         ("q", "quit", "Quit"),
     ]
     DEFAULT_CSS = """
@@ -160,7 +160,7 @@ class GitBrowser(App):
 
     @on(Mount)
     @on(SelectionList.SelectedChanged)
-    def update_selected_view(self) -> None:
+    def update_files(self) -> None:
         selected = self.query_one(SelectionList).selected
 
         unstaged_files = list([file.a_path for file in repo.index.diff(None)])
@@ -172,15 +172,14 @@ class GitBrowser(App):
 
         for file in staged_files:
             if file not in selected and file not in unstaged_files:
-                repo.index.remove([file])
+                repo.index.reset('HEAD', [file])
 
     @on(DescendantFocus, "#cases")
-    def on_cases_focused(self, event) -> None:
-        print(f"@@@ {event} has gained focus.")
+    def on_cases_focused(self, _) -> None:
+        #  skip if any cases are activated
         for radio in self.query(".case-button"):
-            print(f"@@@ Found button {radio}")
-        for radio in self.query("#RG-24131"):
-            print(f"@@@ Found 24131 {radio}")
+            if radio.value:
+                return
 
         #  look for a recent matching ticket
         for message in git.get_recent_messages():
@@ -203,6 +202,15 @@ class GitBrowser(App):
 
     @work
     async def action_commit(self) -> None:
+        if not self.query_one(SelectionList).selected:
+            self.notify("No files are selected for committing!", title="Can't Commit")
+            return
+
+        commit_message = self.query_one("#commit-message").text
+        if not commit_message:
+            self.notify("No commit message entered.", title="Can't Commit")
+            return
+
         if await self.push_screen_wait(ConfirmCommitModal()):
             commit_message = self.query_one("#commit-message").text
             repo.index.commit(commit_message)
