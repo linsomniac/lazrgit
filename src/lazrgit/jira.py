@@ -7,7 +7,7 @@ from . import internal
 from typing import Generator
 
 
-def get_cases() -> Generator[str, None, None]:
+def get_cases() -> Generator[tuple, None, None]:
     token = internal.context.config.get("jira", "token")
     url = internal.context.config.get("jira", "url")
     username = internal.context.config.get("jira", "username")
@@ -21,4 +21,4 @@ def get_cases() -> Generator[str, None, None]:
 
     # Print the key and summary of each issue
     for issue in issues:
-        yield f"{issue.key} {issue.fields.summary}"
+        yield (issue.key, issue.fields.summary)

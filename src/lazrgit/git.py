@@ -14,17 +14,15 @@ class GitContext:
         self.repo = Repo(path)
 
 
-git = GitContext()
+gitctx = GitContext()
 
 
-def get_recent_cases(max_count: int=10) -> Generator[str, None, None]:
-    '''Return the most recent case numbers'''
+def get_recent_messages(max_count: int = 10) -> Generator[str, None, None]:
+    """Return the most recent git log messages"""
     already_seen = set()
-    branch = git.repo.active_branch.name
-    for commit in git.repo.iter_comments(branch, max_count):
-        case = commit.message.split()[0]
-        case = case.rstrip(":")
-        if case in already_seen:
+    branch = gitctx.repo.active_branch.name
+    for commit in gitctx.repo.iter_commits(branch, max_count=max_count):
+        message = commit.message
+        if not message:
             continue
-        already_seen.add(case)
-        yield case
+        yield message

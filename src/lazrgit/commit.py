@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from textual import on, work
-from textual.events import Mount
+from textual.events import Mount, DescendantFocus
 from textual.app import App, ComposeResult
 from textual.screen import ModalScreen, Screen
 from textual.containers import Container, VerticalScroll, Grid
@@ -18,29 +18,29 @@ from textual.widgets import (
     Label,
     RadioButton,
 )
-from git import Repo
 from typing import Generator, Optional
 import re
 from . import jira
-from .git import git
+from . import git
+repo = git.gitctx.repo
 
 
 def all_changed_files() -> Generator[tuple[str, str, bool], None, None]:
     already_seen = set()
 
     #  unstaged files
-    for file in [file.a_path for file in git.repo.index.diff(None)]:
+    for file in [file.a_path for file in repo.index.diff(None)]:
         yield ((file, file, False))
         already_seen.add(file)
     #  staged files
-    for file in [file.a_path for file in git.repo.index.diff(git.repo.head.commit)]:
+    for file in [file.a_path for file in repo.index.diff(repo.head.commit)]:
         if file in already_seen:
             continue
         yield ((file, file, True))
 
 
 def label_untracked_files() -> Generator[tuple[str, str, bool], None, None]:
-    for file in git.repo.untracked_files:
+    for file in repo.untracked_files:
         yield ((f"[UNTRACKED] {file}", file, False))
 
 
@@ -76,6 +76,7 @@ class ConfirmCommitModal(Screen[bool]):
 class GitBrowser(App):
     BINDINGS = [
         ("c", "commit", "Commit"),
+        ("g", "guess_case", "Guess Case"),
         ("q", "quit", "Quit"),
     ]
     DEFAULT_CSS = """
@@ -122,7 +123,7 @@ class GitBrowser(App):
         """Compose our UI."""
         yield Header()
         with Container():
-            branch = git.repo.active_branch.name
+            branch = repo.active_branch.name
             branch_style = {
                 "main": "[white]",
                 "master": "[white]",
@@ -130,20 +131,25 @@ class GitBrowser(App):
                 "prod": ":warning: [red]",
             }.get(branch, "[green]")
 
-            import syslog
-
-            syslog.syslog(f"@@@ Branch: [{branch_style}]{branch}[/]")
             yield Label(
                 f"Branch: {branch_style}{branch}[/]", id="branch", classes="red"
             )
             yield SelectionList[str](
-                *(
-                    list(sorted(all_changed_files()))
-                    + list(label_untracked_files())
-                ),
+                *(list(sorted(all_changed_files())) + list(label_untracked_files())),
                 id="file-list",
             )
-            yield RadioSet(*jira.get_cases(), id="cases")
+
+            def get_cases():
+                self.lzr_tickets = set()
+                for ticket_id, ticket_desc in jira.get_cases():
+                    self.lzr_tickets.add(ticket_id)
+                    yield RadioButton(
+                        f"{ticket_id} {ticket_desc}",
+                        id=ticket_id,
+                        classes="case-button",
+                    )
+
+            yield RadioSet(*get_cases(), id="cases")
             yield TextArea(name="Commit Message", id="commit-message")
         yield Footer()
 
@@ -157,14 +163,31 @@ class GitBrowser(App):
     def update_selected_view(self) -> None:
         selected = self.query_one(SelectionList).selected
 
-        unstaged_files = list([file.a_path for file in git.repo.index.diff(None)])
-        staged_files = list([file.a_path for file in git.repo.index.diff(git.repo.head.commit)])
+        unstaged_files = list([file.a_path for file in repo.index.diff(None)])
+        staged_files = list(
+            [file.a_path for file in repo.index.diff(repo.head.commit)]
+        )
 
-        git.repo.index.add(selected)
+        repo.index.add(selected)
 
         for file in staged_files:
             if file not in selected and file not in unstaged_files:
-                git.repo.index.remove([file])
+                repo.index.remove([file])
+
+    @on(DescendantFocus, "#cases")
+    def on_cases_focused(self, event) -> None:
+        print(f"@@@ {event} has gained focus.")
+        for radio in self.query(".case-button"):
+            print(f"@@@ Found button {radio}")
+        for radio in self.query("#RG-24131"):
+            print(f"@@@ Found 24131 {radio}")
+
+        #  look for a recent matching ticket
+        for message in git.get_recent_messages():
+            for ticket_id in self.lzr_tickets:
+                if ticket_id in message:
+                    self.query_one(f"#{ticket_id}").toggle()
+                    return
 
     def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
         current_text = self.query_one("#commit-message").text
@@ -182,7 +205,7 @@ class GitBrowser(App):
     async def action_commit(self) -> None:
         if await self.push_screen_wait(ConfirmCommitModal()):
             commit_message = self.query_one("#commit-message").text
-            git.repo.index.commit(commit_message)
+            repo.index.commit(commit_message)
             self.app.exit()
         self.refresh()
 
