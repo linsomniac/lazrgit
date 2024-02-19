@@ -76,7 +76,6 @@ class ConfirmCommitModal(Screen[bool]):
 class GitBrowser(App):
     BINDINGS = [
         ("c,ctrl+c", "commit", "Commit"),
-        #("g", "guess_case", "Guess Case"),
         ("q", "quit", "Quit"),
     ]
     DEFAULT_CSS = """
@@ -172,7 +171,8 @@ class GitBrowser(App):
 
         for file in staged_files:
             if file not in selected and file not in unstaged_files:
-                repo.index.reset('HEAD', [file])
+                #repo.index.reset([file])
+                repo.git.reset(file)
 
     @on(DescendantFocus, "#cases")
     def on_cases_focused(self, _) -> None:
