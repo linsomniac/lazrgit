@@ -75,7 +75,7 @@ class ConfirmCommitModal(Screen[bool]):
 
 class GitBrowser(App):
     BINDINGS = [
-        ("c", "commit", "Commit"),
+        ("c,ctrl+c", "commit", "Commit"),
         #("g", "guess_case", "Guess Case"),
         ("q", "quit", "Quit"),
     ]
