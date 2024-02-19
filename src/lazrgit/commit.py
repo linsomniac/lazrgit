@@ -22,6 +22,7 @@ from typing import Generator, Optional
 import re
 from . import jira
 from . import git
+
 repo = git.gitctx.repo
 
 
@@ -163,15 +164,13 @@ class GitBrowser(App):
         selected = self.query_one(SelectionList).selected
 
         unstaged_files = list([file.a_path for file in repo.index.diff(None)])
-        staged_files = list(
-            [file.a_path for file in repo.index.diff(repo.head.commit)]
-        )
+        staged_files = list([file.a_path for file in repo.index.diff(repo.head.commit)])
 
         repo.index.add(selected)
 
         for file in staged_files:
             if file not in selected and file not in unstaged_files:
-                #repo.index.reset([file])
+                # repo.index.reset([file])
                 repo.git.reset(file)
 
     @on(DescendantFocus, "#cases")
