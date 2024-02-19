@@ -47,6 +47,12 @@ def label_untracked_files() -> Generator[tuple[str, str, bool], None, None]:
 class ConfirmCommitModal(Screen[bool]):
     """Ask the user if they want to commit and exit"""
 
+    BINDINGS = [
+        ("y", "yes", "Yes"),
+        ("c", "cancel", "Cancel"),
+        ("escape", "cancel", "Cancel"),
+    ]
+
     def compose(self) -> ComposeResult:
         yield Label("Are you sure you want to commit?", id="question")
         yield Button("Yes", variant="success", id="yes")
@@ -56,8 +62,14 @@ class ConfirmCommitModal(Screen[bool]):
     def handle_yes(self) -> None:
         self.dismiss(True)
 
+    def action_yes(self) -> None:
+        self.dismiss(True)
+
     @on(Button.Pressed, "#cancel")
     def handle_cancel(self) -> None:
+        self.dismiss(False)
+
+    def action_cancel(self) -> None:
         self.dismiss(False)
 
 
@@ -110,8 +122,9 @@ class GitBrowser(App):
         """Compose our UI."""
         yield Header()
         with Container():
-            branch = str(git.repo.active_branch)
+            branch = git.repo.active_branch.name
             branch_style = {
+                "main": "[white]",
                 "master": "[white]",
                 "stg": ":warning: [yellow]",
                 "prod": ":warning: [red]",
