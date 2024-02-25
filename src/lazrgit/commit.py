@@ -18,6 +18,7 @@ from textual.widgets import (
     Label,
     RadioButton,
 )
+from rich.syntax import Syntax
 from typing import Generator, Optional
 import re
 from . import jira
@@ -48,6 +49,7 @@ def label_untracked_files() -> Generator[tuple[str, str, bool], None, None]:
     for file in repo.untracked_files:
         yield ((f"[UNTRACKED] {file}", file, False))
 
+
 class FileDiffModal(Screen[str]):
     """Display the diff of a file"""
 
@@ -61,11 +63,13 @@ class FileDiffModal(Screen[str]):
 
     def compose(self) -> ComposeResult:
         yield Label(f"Diff for {self.filename}", id="title")
-        for line in git.get_file_diff(self.filename).split('\n'):
-            yield Label(line)
+        diff = git.get_file_diff(self.filename)
+        syntax = Syntax(diff, "diff", line_numbers=True)
+        yield VerticalScroll(Static(syntax))
 
     def action_cancel(self) -> None:
         self.dismiss()
+
 
 # Bind the "enter" key to open the FileDiffModal in the GitBrowser class
 class GitBrowser(App):
@@ -187,15 +191,14 @@ class GitBrowser(App):
         yield Footer()
 
     async def on_mount(self) -> None:
-        #ret = ask_openai.ask_openai('You are a poet', 'did you know it?')
-        #import syslog; syslog.syslog(f"@@@ ret: {ret}")
+        # ret = ask_openai.ask_openai('You are a poet', 'did you know it?')
+        # import syslog; syslog.syslog(f"@@@ ret: {ret}")
 
         self.query_one(SelectionList).border_title = "Files"
         self.query_one(RadioSet).border_title = "Cases"
         self.query_one(TextArea).border_title = "Commit Message"
 
-        #self.my_task = asyncio.create_task(self.load_cases())
-
+        # self.my_task = asyncio.create_task(self.load_cases())
 
     async def load_cases(self) -> None:
         def make_buttons(cases):
@@ -207,10 +210,10 @@ class GitBrowser(App):
                     id=ticket_id,
                     classes="case-button",
                 )
+
         self.cases = jira.get_cases()
         for button in make_buttons(self.cases):
             yield button
-
 
     @on(Mount)
     @on(SelectionList.SelectedChanged)
@@ -276,7 +279,9 @@ class GitBrowser(App):
             self.notify("No files are selected for diff!", title="Can't Diff")
             return
 
-        highlighted_filename = self.query_one(SelectionList).get_option_at_index(highlighted_index).value
+        highlighted_filename = (
+            self.query_one(SelectionList).get_option_at_index(highlighted_index).value
+        )
         await self.push_screen_wait(FileDiffModal(highlighted_filename))
         self.refresh()
 
