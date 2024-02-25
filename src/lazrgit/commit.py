@@ -126,7 +126,7 @@ class GitBrowser(App):
     def compose(self) -> ComposeResult:
         """Compose our UI."""
         yield Header()
-        with Container():
+        with Container(id="main"):
             branch = repo.active_branch.name
             branch_style = {
                 "main": "[white]",
@@ -158,22 +158,30 @@ class GitBrowser(App):
         yield Footer()
 
     async def on_mount(self) -> None:
-        ret = ask_openai.ask_openai('You are a poet', 'did you know it?')
-        import syslog; syslog.syslog(f"@@@ ret: {ret}")
+        #ret = ask_openai.ask_openai('You are a poet', 'did you know it?')
+        #import syslog; syslog.syslog(f"@@@ ret: {ret}")
 
         self.query_one(SelectionList).border_title = "Files"
         self.query_one(RadioSet).border_title = "Cases"
         self.query_one(TextArea).border_title = "Commit Message"
 
-        self.my_task = asyncio.create_task(self.load_cases())
+        #self.my_task = asyncio.create_task(self.load_cases())
 
 
     async def load_cases(self) -> None:
-        self.cases = await asyncio.to_thread(jira.get_cases)
-        with open('log', 'a') as f:
-            f.write(f'@@@ Done with async load cases {list(self.cases)}')
+        def make_buttons(cases):
+            self.lzr_tickets = set()
+            for ticket_id, ticket_desc in cases:
+                self.lzr_tickets.add(ticket_id)
+                yield RadioButton(
+                    f"{ticket_id} {ticket_desc}",
+                    id=ticket_id,
+                    classes="case-button",
+                )
+        self.cases = jira.get_cases()
+        for button in make_buttons(self.cases):
+            yield button
 
-        #await self.update_ui()
 
     @on(Mount)
     @on(SelectionList.SelectedChanged)
