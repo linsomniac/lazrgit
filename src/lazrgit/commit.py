@@ -269,6 +269,8 @@ class GitBrowser(App):
         if await self.push_screen_wait(ConfirmCommitModal()):
             commit_message = self.query_one("#commit-message").text
             repo.index.commit(commit_message)
+            repo.git.pull()
+            repo.git.push()
             self.app.exit()
         self.refresh()
 
