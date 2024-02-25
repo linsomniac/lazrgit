@@ -41,8 +41,8 @@ def get_recent_messages_and_diffs(max_count: int = 10) -> Generator[tuple[str, l
 
     for commit_message, diffs_list in get_recent_messages_and_diffs(max_count):
     """
-    branch = repo.active_branch.name
-    for commit in repo.iter_commits(branch, max_count=3):
+    branch = gitctx.repo.active_branch.name
+    for commit in gitctx.repo.iter_commits(branch, max_count=3):
         message = commit.message
         if not message:
             continue
@@ -59,8 +59,8 @@ def get_file_recent_messages_and_diffs(filename: str, max_count: int = 10) -> Ge
 
     for commit_message, diffs_list in get_recent_messages_and_diffs(max_count):
     """
-    branch = repo.active_branch.name
-    for commit in repo.iter_commits(branch, paths=filename, max_count=3):
+    branch = gitctx.repo.active_branch.name
+    for commit in gitctx.repo.iter_commits(branch, paths=filename, max_count=3):
         message = commit.message
         if not message:
             continue
@@ -71,3 +71,10 @@ def get_file_recent_messages_and_diffs(filename: str, max_count: int = 10) -> Ge
                 continue
             diffs.append(get_context_diff(diff.a_blob.data_stream.read().decode(), diff.b_blob.data_stream.read().decode()))
         yield message, diffs
+
+
+def get_file_diff(filename: str) -> Generator[tuple[str, list[str]], None, None]:
+    """Return the diff of the file's current state and last commit.
+    """
+    diff = gitctx.repo.git.diff(gitctx.repo.head.commit.tree, filename)
+    return diff

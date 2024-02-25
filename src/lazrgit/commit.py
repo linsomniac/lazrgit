@@ -48,6 +48,34 @@ def label_untracked_files() -> Generator[tuple[str, str, bool], None, None]:
     for file in repo.untracked_files:
         yield ((f"[UNTRACKED] {file}", file, False))
 
+class FileDiffModal(Screen[str]):
+    """Display the diff of a file"""
+
+    BINDINGS = [
+        ("escape,q", "cancel", "Cancel"),
+    ]
+
+    def __init__(self, filename: str) -> None:
+        super().__init__()
+        self.filename = filename
+
+    def compose(self) -> ComposeResult:
+        yield Label(f"Diff for {self.filename}", id="title")
+        for line in git.get_file_diff(self.filename).split('\n'):
+            yield Label(line)
+
+    def action_cancel(self) -> None:
+        self.dismiss()
+
+# Bind the "enter" key to open the FileDiffModal in the GitBrowser class
+class GitBrowser(App):
+    BINDINGS = [
+        ("c,ctrl+c", "commit", "Commit"),
+        ("q", "quit", "Quit"),
+        ("enter", "show_diff", "Show Diff"),
+    ]
+    # ...
+
 
 class ConfirmCommitModal(Screen[bool]):
     """Ask the user if they want to commit and exit"""
@@ -82,6 +110,7 @@ class GitBrowser(App):
     BINDINGS = [
         ("c,ctrl+c", "commit", "Commit"),
         ("q", "quit", "Quit"),
+        ("ctrl+d", "show_diff", "Show Diff"),
     ]
     DEFAULT_CSS = """
     ConfirmCommitModal {
@@ -238,6 +267,17 @@ class GitBrowser(App):
             commit_message = self.query_one("#commit-message").text
             repo.index.commit(commit_message)
             self.app.exit()
+        self.refresh()
+
+    @work
+    async def action_show_diff(self) -> None:
+        highlighted_index = self.query_one(SelectionList).highlighted
+        if highlighted_index is None:
+            self.notify("No files are selected for diff!", title="Can't Diff")
+            return
+
+        highlighted_filename = self.query_one(SelectionList).get_option_at_index(highlighted_index).value
+        await self.push_screen_wait(FileDiffModal(highlighted_filename))
         self.refresh()
 
 
