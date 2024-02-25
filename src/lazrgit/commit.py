@@ -23,6 +23,9 @@ import re
 from . import jira
 from . import git
 from . import ask_openai
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
 
 repo = git.gitctx.repo
 
@@ -154,12 +157,23 @@ class GitBrowser(App):
             yield TextArea(name="Commit Message", id="commit-message")
         yield Footer()
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         ret = ask_openai.ask_openai('You are a poet', 'did you know it?')
         import syslog; syslog.syslog(f"@@@ ret: {ret}")
+
         self.query_one(SelectionList).border_title = "Files"
         self.query_one(RadioSet).border_title = "Cases"
         self.query_one(TextArea).border_title = "Commit Message"
+
+        self.my_task = asyncio.create_task(self.load_cases())
+
+
+    async def load_cases(self) -> None:
+        self.cases = await asyncio.to_thread(jira.get_cases)
+        with open('log', 'a') as f:
+            f.write(f'@@@ Done with async load cases {list(self.cases)}')
+
+        #await self.update_ui()
 
     @on(Mount)
     @on(SelectionList.SelectedChanged)
