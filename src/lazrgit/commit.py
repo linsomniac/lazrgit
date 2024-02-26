@@ -277,6 +277,7 @@ class GitBrowser(App):
             return
 
         ret = await self.push_screen_wait(ConfirmCommitModal())
+        self.refresh()
         if ret != "cancel":
             self.notify("Doing commit...", title="Commit")
             commit_message = self.query_one("#commit-message").text
@@ -285,6 +286,7 @@ class GitBrowser(App):
             self.notify("Pull and push...", title="Syncig")
             repo.git.pull()
             repo.git.push()
+        if ret != "cancel":
             self.app.exit()
         self.refresh()
 
@@ -347,7 +349,6 @@ class GitBrowser(App):
 
         ret = ask_openai.ask_openai(system_message, user_message)
         self.query_one("#commit-message").text = ret
-        
         
         
 def main():
