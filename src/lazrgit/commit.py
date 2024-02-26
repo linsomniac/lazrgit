@@ -115,6 +115,7 @@ class ConfirmCommitModal(Screen[bool]):
             f.write("5\n")
         self.dismiss("cancel")
 
+
     def action_cancel(self) -> None:
         with open("log", "a") as f:
             f.write("6\n")
