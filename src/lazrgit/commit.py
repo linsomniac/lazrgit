@@ -75,29 +75,50 @@ class ConfirmCommitModal(Screen[bool]):
     """Ask the user if they want to commit and exit"""
 
     BINDINGS = [
-        ("y", "yes", "Yes"),
+        ("o", "commit", "commit Only"),
+        ("y", "push", "commit and Push"),
         ("c", "cancel", "Cancel"),
         ("escape", "cancel", "Cancel"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Label("Are you sure you want to commit?", id="question")
-        yield Button("Yes", variant="success", id="yes")
+        yield Button("Commit Only", variant="success", id="commit")
+        yield Button("Commit and Push", variant="success", id="commit-push")
         yield Button("Cancel", variant="primary", id="cancel")
 
-    @on(Button.Pressed, "#yes")
-    def handle_yes(self) -> None:
-        self.dismiss(True)
+    @on(Button.Pressed, "#commit-push")
+    def handle_commitpush(self) -> None:
+        with open("log", "a") as f:
+            f.write("1\n")
+        self.dismiss("commit push")
 
-    def action_yes(self) -> None:
-        self.dismiss(True)
+    def action_commitpush(self) -> None:
+        with open("log", "a") as f:
+            f.write("2\n")
+        self.dismiss("commit push")
+
+    @on(Button.Pressed, "#commit")
+    def handle_commit(self) -> None:
+        with open("log", "a") as f:
+            f.write("3\n")
+        self.dismiss("commit only")
+
+    def action_commit(self) -> None:
+        with open("log", "a") as f:
+            f.write("4\n")
+        self.dismiss("commit only")
 
     @on(Button.Pressed, "#cancel")
     def handle_cancel(self) -> None:
-        self.dismiss(False)
+        with open("log", "a") as f:
+            f.write("5\n")
+        self.dismiss("cancel")
 
     def action_cancel(self) -> None:
-        self.dismiss(False)
+        with open("log", "a") as f:
+            f.write("6\n")
+        self.dismiss("cancel")
 
 
 class GitBrowser(App):
