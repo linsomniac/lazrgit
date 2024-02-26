@@ -89,6 +89,7 @@ class FileDiffModal(Screen[str]):
         syntax = Syntax(diff, "diff", line_numbers=True)
         yield VerticalScroll(Static(syntax))
 
+
     def action_cancel(self) -> None:
         self.dismiss()
 
