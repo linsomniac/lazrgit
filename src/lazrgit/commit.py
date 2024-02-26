@@ -57,6 +57,28 @@ class FileDiffModal(Screen[str]):
         ("escape,q", "cancel", "Cancel"),
     ]
 
+    DEFAULT_CSS = """
+    FileDiffModal {
+        align: center middle;
+    }
+
+    FileDiffModal > Label {
+        max-height: 1;
+        text-align: center;
+        width: 1fr;
+    }
+
+    FileDiffModal > VerticalScroll {
+        max-height: 100%;
+        text-align: center;
+        width: 1fr;
+    }
+
+    Screen {
+        background: $surface-darken-1;
+    }
+    """
+
     def __init__(self, filename: str) -> None:
         super().__init__()
         self.filename = filename
@@ -81,11 +103,29 @@ class ConfirmCommitModal(Screen[str]):
         ("escape", "cancel", "Cancel"),
     ]
 
+    DEFAULT_CSS = """
+    ConfirmCommitModal {
+        layout: grid;
+        grid-size: 1 2;                
+        align: center middle;
+    }
+
+    ConfirmCommitModal Button {
+        margin: 2; 
+        width: 1fr;     
+    }
+
+    Screen {
+        background: $surface-darken-1;
+    }
+    """
+
     def compose(self) -> ComposeResult:
         yield Label("Are you sure you want to commit?", id="question")
-        yield Button("Commit Only", variant="success", id="commit")
-        yield Button("Commit and Push", variant="success", id="commit-push")
-        yield Button("Cancel", variant="primary", id="cancel")
+        with Container():
+            yield Button("Commit Only", variant="success", id="commit")
+            yield Button("Commit and Push", variant="success", id="commit-push")
+            yield Button("Cancel", variant="primary", id="cancel")
 
     @on(Button.Pressed, "#commit-push")
     def handle_commitpush(self) -> None:
@@ -277,13 +317,10 @@ class GitBrowser(App):
             return
 
         ret = await self.push_screen_wait(ConfirmCommitModal())
-        self.refresh()
         if ret != "cancel":
-            self.notify("Doing commit...", title="Commit")
             commit_message = self.query_one("#commit-message").text
             repo.index.commit(commit_message)
         if ret == "commit push":
-            self.notify("Pull and push...", title="Syncig")
             repo.git.pull()
             repo.git.push()
         if ret != "cancel":
