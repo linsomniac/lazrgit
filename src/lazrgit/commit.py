@@ -71,16 +71,6 @@ class FileDiffModal(Screen[str]):
         self.dismiss()
 
 
-# Bind the "enter" key to open the FileDiffModal in the GitBrowser class
-class GitBrowser(App):
-    BINDINGS = [
-        ("c,ctrl+c", "commit", "Commit"),
-        ("q", "quit", "Quit"),
-        ("enter", "show_diff", "Show Diff"),
-    ]
-    # ...
-
-
 class ConfirmCommitModal(Screen[bool]):
     """Ask the user if they want to commit and exit"""
 
@@ -114,7 +104,8 @@ class GitBrowser(App):
     BINDINGS = [
         ("c,ctrl+c", "commit", "Commit"),
         ("q", "quit", "Quit"),
-        ("ctrl+d", "show_diff", "Show Diff"),
+        ("ctrl+d,d", "show_diff", "Show Diff"),
+        ("ctrl+g,g", "generate_message", "Generate Message"),
     ]
     DEFAULT_CSS = """
     ConfirmCommitModal {
@@ -191,9 +182,6 @@ class GitBrowser(App):
         yield Footer()
 
     async def on_mount(self) -> None:
-        # ret = ask_openai.ask_openai('You are a poet', 'did you know it?')
-        # import syslog; syslog.syslog(f"@@@ ret: {ret}")
-
         self.query_one(SelectionList).border_title = "Files"
         self.query_one(RadioSet).border_title = "Cases"
         self.query_one(TextArea).border_title = "Commit Message"
@@ -287,7 +275,55 @@ class GitBrowser(App):
         await self.push_screen_wait(FileDiffModal(highlighted_filename))
         self.refresh()
 
+    @work
+    async def action_generate_message(self) -> None:
+        current_text = self.query_one("#commit-message").text
 
+        selected_files = self.query_one(SelectionList).selected
+        if not selected_files:
+            self.notify("No files have been selected", title="File Selection Error")
+            return
+
+        ticket_number = None
+        current_message = None
+        m = re.match(r"^(RG-[0-9]+)(:?\s+(.*))?", current_text)
+        if m:
+            ticket_number = m.group(1)
+            current_message = m.group(3).strip()
+
+        system_message = """You are an expert in computer source code documentation.  I
+                will provide you with a a set of files and their unified diffs of changes
+                I have made.  I will also provide a ticket number and a brief description
+                of the ticket.  I would like you to write a commit message for me.  The
+                commit message should be follow best practices for a git commit message:
+                a concise but descriptive first line that summarizes the changes, a blank
+                line, and then more detailed information about the changes if necessary
+                to expand on the summary line.  You will *ONLY* output the the change
+                message, any discussion about the changes *MUST* be prefixed with the
+                "#" comment character.  If you need more information, please ask me.
+                If you write a perfect change message, I will give you a $500 bonus.
+                The current commit message, if provided, should be used as the basis
+                for your new commit message, but you should feel free to modify it as
+                you see fit to make it more clear and easily understood.
+                """
+        user_message = ""
+        if ticket_number:
+            user_message += f"The current ticket number is {ticket_number} and this *MUST* be included at the beginning of the commit summary.  "
+            ticket_description = str(self.query_one(f"#{ticket_number}").label).split(None, 1)[1]
+            user_message += f"A brief summary of the ticket that this commit is for is: '{ticket_description}'.  "
+        if current_message:
+            user_message += ("The current commit message I have written, which I would "
+                "like you to use as the basis for your new commit message, but "
+                f"optimized for carity and readability, is:\n\n```\n{current_message}\n```")
+        for filename in selected_files:
+            diff = git.get_file_diff(filename)
+            user_message += f"\n\nUnified diff of changes for file '{filename}':\n{diff}\n\n"
+
+        ret = ask_openai.ask_openai(system_message, user_message)
+        self.query_one("#commit-message").text = ret
+        
+        
+        
 def main():
     GitBrowser().run()
 
