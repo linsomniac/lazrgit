@@ -71,7 +71,7 @@ class FileDiffModal(Screen[str]):
         self.dismiss()
 
 
-class ConfirmCommitModal(Screen[bool]):
+class ConfirmCommitModal(Screen[str]):
     """Ask the user if they want to commit and exit"""
 
     BINDINGS = [
@@ -276,9 +276,13 @@ class GitBrowser(App):
             self.notify("No commit message entered.", title="Can't Commit")
             return
 
-        if await self.push_screen_wait(ConfirmCommitModal()):
+        ret = await self.push_screen_wait(ConfirmCommitModal())
+        if ret != "cancel":
+            self.notify("Doing commit...", title="Commit")
             commit_message = self.query_one("#commit-message").text
             repo.index.commit(commit_message)
+        if ret == "commit push":
+            self.notify("Pull and push...", title="Syncig")
             repo.git.pull()
             repo.git.push()
             self.app.exit()
