@@ -97,9 +97,8 @@ class ConfirmCommitModal(Screen[str]):
     """Ask the user if they want to commit and exit"""
 
     BINDINGS = [
-        ("o", "commit", "commit Only"),
-        ("y", "push", "commit and Push"),
-        ("c", "cancel", "Cancel"),
+        ("c", "commit", "Commit only"),
+        ("p", "commitpush", "commit and Push"),
         ("escape", "cancel", "Cancel"),
     ]
 
@@ -123,9 +122,9 @@ class ConfirmCommitModal(Screen[str]):
     def compose(self) -> ComposeResult:
         yield Label("Are you sure you want to commit?", id="question")
         with Container():
-            yield Button("Commit Only", variant="success", id="commit")
-            yield Button("Commit and Push", variant="success", id="commit-push")
-            yield Button("Cancel", variant="primary", id="cancel")
+            yield Button("C)ommit only", variant="success", id="commit")
+            yield Button("commit and P)ush", variant="success", id="commit-push")
+            yield Button("Cancel (ESC)", variant="primary", id="cancel")
 
     @on(Button.Pressed, "#commit-push")
     def handle_commitpush(self) -> None:
