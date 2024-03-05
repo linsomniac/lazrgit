@@ -16,17 +16,18 @@ class GitContext:
 gitctx = GitContext()
 
 
-def unified_diff(old: str, new: str, context_lines: int=3) -> str:
+def unified_diff(old: str, new: str, context_lines: int = 3) -> str:
     """Given two strings, generate a unified diff between them"""
     old_lines = old.splitlines(keepends=True)
     new_lines = new.splitlines(keepends=True)
     diff = difflib.unified_diff(old_lines, new_lines, n=context_lines)
-    return ''.join(diff)
+    return "".join(diff)
 
 
-def get_recent_messages(max_count: int = 10) -> Generator[tuple[str, list[str]], None, None]:
-    """Return the most recent commit messages
-    """
+def get_recent_messages(
+    max_count: int = 10,
+) -> Generator[tuple[str, list[str]], None, None]:
+    """Return the most recent commit messages"""
     branch = gitctx.repo.active_branch.name
     for commit in gitctx.repo.iter_commits(branch, max_count=max_count):
         message = commit.message
@@ -35,7 +36,9 @@ def get_recent_messages(max_count: int = 10) -> Generator[tuple[str, list[str]],
         yield message
 
 
-def get_recent_messages_and_diffs(max_count: int = 10) -> Generator[tuple[str, list[str]], None, None]:
+def get_recent_messages_and_diffs(
+    max_count: int = 10,
+) -> Generator[tuple[str, list[str]], None, None]:
     """Return the most recent git log messages and their diffs
     Yields the commit message and a list of diff strings.
 
@@ -48,12 +51,21 @@ def get_recent_messages_and_diffs(max_count: int = 10) -> Generator[tuple[str, l
             continue
 
         diffs = []
-        for diff in commit.diff('HEAD~1').iter_change_type('M'):  # 'M' for modified files
-            diffs.append(unified_diff(diff.a_blob.data_stream.read().decode(), diff.b_blob.data_stream.read().decode()))
+        for diff in commit.diff("HEAD~1").iter_change_type(
+            "M"
+        ):  # 'M' for modified files
+            diffs.append(
+                unified_diff(
+                    diff.a_blob.data_stream.read().decode(),
+                    diff.b_blob.data_stream.read().decode(),
+                )
+            )
         yield message, diffs
 
 
-def get_file_recent_messages_and_diffs(filename: str, max_count: int = 10, context_lines=10) -> Generator[tuple[str, list[str]], None, None]:
+def get_file_recent_messages_and_diffs(
+    filename: str, max_count: int = 10, context_lines=10
+) -> Generator[tuple[str, list[str]], None, None]:
     """Return the most recent git log messages and their diffs for a specific file
     Yields the commit message and a list of diff strings.
 
@@ -66,15 +78,22 @@ def get_file_recent_messages_and_diffs(filename: str, max_count: int = 10, conte
             continue
 
         diffs = []
-        for diff in commit.diff('HEAD~1').iter_change_type('M'):  # 'M' for modified files
+        for diff in commit.diff("HEAD~1").iter_change_type(
+            "M"
+        ):  # 'M' for modified files
             if diff.a_path != filename:
                 continue
-            diffs.append(unified_diff(diff.a_blob.data_stream.read().decode(), diff.b_blob.data_stream.read().decode(), context_lines=context_lines))
+            diffs.append(
+                unified_diff(
+                    diff.a_blob.data_stream.read().decode(),
+                    diff.b_blob.data_stream.read().decode(),
+                    context_lines=context_lines,
+                )
+            )
         yield message, diffs
 
 
 def get_file_diff(filename: str) -> Generator[tuple[str, list[str]], None, None]:
-    """Return the diff of the file's current state and last commit.
-    """
+    """Return the diff of the file's current state and last commit."""
     diff = gitctx.repo.git.diff(gitctx.repo.head.commit.tree, filename)
     return diff

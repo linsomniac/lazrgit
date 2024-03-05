@@ -84,6 +84,11 @@ class FileDiffModal(Screen[str]):
         self.filename = filename
 
     def compose(self) -> ComposeResult:
+        """
+        This method is used to compose the UI elements for the FileDiffModal screen.
+        It yields a Label with the filename and a VerticalScroll element containing the diff of the file.
+        The diff is highlighted using the Syntax class with "diff" as the language and line numbers enabled.
+        """
         yield Label(f"Diff for {self.filename}", id="title")
         diff = git.get_file_diff(self.filename)
         syntax = Syntax(diff, "diff", line_numbers=True)
@@ -294,6 +299,7 @@ class GitBrowser(App):
                     return
 
     def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
+        """"""
         current_text = self.query_one("#commit-message").text
         m = re.match(r"^RG-[0-9]+:?\s+(.*)", current_text)
         if m:
@@ -385,6 +391,15 @@ class GitBrowser(App):
             user_message += f"\n\nUnified diff of changes for file '{filename}':\n{diff}\n\n"
 
         ret = ask_openai.ask_openai(system_message, user_message)
+
+        #  Clean up commit message
+        ret = ret.strip()
+        if ret.startswith('```'):
+            ret = ret.split('```')[1]
+        if ret.endswith('```'):
+            ret = ret.rsplit('```')[0]
+        ret = ret.strip()
+
         self.query_one("#commit-message").text = ret
         
         
